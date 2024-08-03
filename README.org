@@ -2,7 +2,7 @@
 
 Associate vterm buffers to regular Emacs buffers.
 
-Quickly recall them right vterm buffer when switching between buffers or projects.
+Quickly recall the matching vterm buffer after switching buffers or projects.
 
 ** Configuration
 
