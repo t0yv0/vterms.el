@@ -4,6 +4,16 @@ Associate vterm buffers to regular Emacs buffers.
 
 Quickly recall them right vterm buffer when switching between buffers or projects.
 
+** Configuration
+
+#+begin_src emacs-lisp :tangle yes
+(use-package vterms
+  :bind (("C-c v v" . vterms-switch)
+         ("C-c v p" . vterms-new-in-project-root)
+         ("C-c v d" . vterms-new)
+         ("C-c v z" . vterms-repeat))
+#+end_src
+
 ** Usage
 
 - vterms-switch
