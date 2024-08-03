@@ -16,6 +16,7 @@
   (make-hash-table :test 'equal))
 
 
+;;;###autoload
 (defun vterms-switch ()
   "Display a Vterm buffer associated with the current buffer.
 
@@ -37,6 +38,7 @@ current buffer, and switch to it."
     (vterms-new))))
 
 
+;;;###autoload
 (defun vterms-new ()
   "Create a Vterm buffer associated with the current buffer.
 
@@ -49,6 +51,7 @@ directory."
                  nil)))
 
 
+;;;###autoload
 (defun vterms-new-in-project-root ()
   "Like `vterms-new` but opens the Vterm in the current project's
 root directory."
@@ -58,6 +61,7 @@ root directory."
                  (project-root (project-current)))))
 
 
+;;;###autoload
 (defun vterms-repeat ()
   "Clear a visible Vterm and re-submit the last command to it."
   (interactive)
