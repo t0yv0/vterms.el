@@ -7,6 +7,10 @@
 ;;; Code:
 
 
+(require 'project)
+(require 'vterm)
+
+
 (defvar vterms--table
   ;; create a string to string hash table
   (make-hash-table :test 'equal))
@@ -50,7 +54,7 @@ directory."
 root directory."
   (interactive)
   (vterms--new (if (null (project-current))
-                   null
+                   nil
                  (project-root (project-current)))))
 
 
@@ -58,7 +62,7 @@ root directory."
   "Suggest a name part for a Vterm buffer based on a directory."
   (cond ((null directory) "")
         (t (concat "-" (file-name-nondirectory
-                        (substring root 0 (- (length root) 1)))))))
+                        (substring directory 0 (- (length directory) 1)))))))
 
 
 (defun vterms--new (root)
