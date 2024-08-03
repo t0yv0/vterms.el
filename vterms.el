@@ -58,6 +58,18 @@ root directory."
                  (project-root (project-current)))))
 
 
+(defun vterms-repeat ()
+  "Clear a visible Vterm and re-submit the last command to it."
+  (interactive)
+  (save-window-excursion
+    (let ((buf (vterms--visible-buffer)))
+      (when buf
+        (with-current-buffer buf
+          (vterm-clear)
+          (vterm-send-key "<up>")
+          (vterm-send-return))))))
+
+
 (defun vterms--name-suggestion-for-directory (directory)
   "Suggest a name part for a Vterm buffer based on a directory."
   (cond ((null directory) "")

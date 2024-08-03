@@ -4,8 +4,9 @@ Associate vterm buffers to regular Emacs buffers.
 
 Quickly recall them right vterm buffer when switching between buffers or projects.
 
-** Installation
-
-** Configuration
-
 ** Usage
+
+- vterms-switch
+- vterms-new
+- vterms-new-in-project-root
+- vterms-repeat
