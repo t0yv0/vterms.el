@@ -18,24 +18,13 @@
 
 ;;;###autoload
 (defun vterms-switch ()
-  "Display a Vterm buffer associated with the current buffer.
-
-If there is no Vterm buffer associated with the current buffer,
-but the current frame is displaying a Vterm buffer, switch to
-that buffer instead.
-
-If there is neither an associated Vterm buffer nor a currently
-visible Vterm buffer to switch to, and the current buffer is not
-a Vterm one, create a new Vterm buffer, associate it with the
-current buffer, and switch to it."
+  "Display a Vterm buffer associated with the current buffer."
   (interactive)
   (cond
    ((vterms--associated-buffer)
     (switch-to-buffer (vterms--associated-buffer)))
-   ((vterms--visible-buffer)
-    (switch-to-buffer (vterms--visible-buffer)))
-   ((not (eq major-mode 'vterm-mode))
-    (vterms-new))))
+   (t
+    (error "%s" "No associated vterm buffer"))))
 
 
 ;;;###autoload
@@ -72,6 +61,15 @@ root directory."
           (vterm-clear)
           (vterm-send-key "<up>")
           (vterm-send-return))))))
+
+
+;;;###autoload
+(defun vterms-window ()
+  "Select a visible Vterm window."
+  (interactive)
+  (let ((b (vterms--visible-buffer)))
+    (when b
+      (switch-to-buffer b))))
 
 
 (defun vterms--name-suggestion-for-directory (directory)
