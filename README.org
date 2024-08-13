@@ -1,8 +1,8 @@
 * vterms.el
 
-Associate [[https://github.com/akermu/emacs-libvterm][vterm]] buffers to regular Emacs buffers.
+Associate [[https://github.com/akermu/emacs-libvterm][Vterm]] buffers to regular Emacs buffers.
 
-Quickly recall the matching vterm buffer after switching buffers or projects.
+Quickly recall the matching Vterm buffer after switching buffers or projects.
 
 ** Configuration
 
@@ -30,7 +30,7 @@ this directory.
 
 *** vterms-new-in-project-root
 
-Like `vterms-new` but opens the Vterm in the current project's root directory.
+Like ~vterms-new~ but opens the Vterm in the current project's root directory.
 
 *** vterms-repeat
 
