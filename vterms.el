@@ -11,11 +11,6 @@
 (require 'vterm)
 
 
-(defvar vterms--table
-  ;; create a string to string hash table
-  (make-hash-table :test 'equal))
-
-
 ;;;###autoload
 (defun vterms-switch ()
   "Display a Vterm buffer associated with the current buffer."
@@ -81,8 +76,8 @@ root directory."
 
 (defun vterms--new (root)
   (let* ((name-suggestion (vterms--name-suggestion-for-directory root))
-        (buffer (vterms--fresh-name name-suggestion)))
-    (puthash (buffer-name (current-buffer)) buffer vterms--table)
+         (buffer (vterms--fresh-name name-suggestion)))
+    (vterms--db-register (buffer-name (current-buffer)) buffer)
     (if root
         (let ((default-directory root))
           (vterm buffer))
@@ -92,7 +87,7 @@ root directory."
 
 
 (defun vterms--associated-buffer ()
-  (gethash (buffer-name (current-buffer)) vterms--table))
+  (vterms--db-lookup-vterm-buffer-name (buffer-name (current-buffer))))
 
 
 (defun vterms--visible-buffer ()
@@ -114,13 +109,11 @@ current frame. Returns nil if none is found."
   "Compute a fresh buffer name for a Vterm buffer.
 
 Avoids conflicts with currently registered buffers."
-  (let ((taken (make-hash-table :test 'equal))
-        (choice nil)
+  (let ((choice nil)
         (index 0))
-    (maphash (lambda (key value) t (puthash value key taken)) vterms--table)
     (while (null choice)
       (let ((n (vterms--full-name name-suggestion index)))
-        (unless (gethash n taken)
+        (unless (vterms--db-taken n)
           (setq choice n)))
       (setq index (+ index 1)))
     choice))
@@ -130,6 +123,24 @@ Avoids conflicts with currently registered buffers."
   (if (equal index 0)
       (format "*vterm%s*" name-suggestion)
     (format "*vterm%s-%s*" name-suggestion index)))
+
+
+(defvar vterms--db
+  (cons (make-hash-table :test 'equal)
+        (make-hash-table :test 'equal)))
+
+
+(defun vterms--db-taken (vterm-buffer-name)
+  (if (gethash vterm-buffer-name (cdr vterms--db)) t nil))
+
+
+(defun vterms--db-register (regular-buffer-name vterm-buffer-name)
+  (puthash regular-buffer-name vterm-buffer-name (car vterms--db))
+  (puthash vterm-buffer-name t (cdr vterms--db)))
+
+
+(defun vterms--db-lookup-vterm-buffer-name (regular-buffer-name)
+  (gethash regular-buffer-name (car vterms--db)))
 
 
 (provide 'vterms)
