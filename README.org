@@ -1,6 +1,6 @@
 * vterms.el
 
-Associate vterm buffers to regular Emacs buffers.
+Associate [[https://github.com/akermu/emacs-libvterm][vterm]] buffers to regular Emacs buffers.
 
 Quickly recall the matching vterm buffer after switching buffers or projects.
 
