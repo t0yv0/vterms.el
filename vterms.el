@@ -13,13 +13,58 @@
 
 ;;;###autoload
 (defun vterms-switch ()
-  "Display a Vterm buffer associated with the current buffer."
+  "Select a Vterm buffer associated with the current buffer."
   (interactive)
+  (unless (vterms--try-switch)
+    (error "%s" "No associated vterm buffer")))
+
+
+;;;###autoload
+(defun vterms-switch-or-new (arg)
+  "Try `vterms-switch' falling back on `vterms-new'.
+
+If prefix ARG is given, behave like `vterms-new'."
+  (interactive "P")
+  (unless (or arg
+              (vterms--try-switch)
+              (vterms--try-switch-to-root (vterms--dir)))
+    (vterms-new)))
+
+
+;;;###autoload
+(defun vterms-switch-or-new-in-project-root (arg)
+  "Try `vterms-switch' falling back on `vterms-new-in-project-root'.
+
+If prefix ARG is given, behave like `vterms-new-in-project-root'."
+  (interactive "P")
+  (unless (or arg
+              (vterms--try-switch)
+              (vterms--try-switch-to-root (vterms--project-root))
+    (vterms-new-in-project-root))))
+
+
+(defun vterms--try-switch ()
+  "Implements `vterms-switch` logic returning a success code."
   (cond
+   ((equal major-mode 'vterm-mode)
+    (error "%s" "vterms-switch error: already in vterm-mode"))
    ((vterms--associated-buffer)
-    (switch-to-buffer (vterms--associated-buffer)))
-   (t
-    (error "%s" "No associated vterm buffer"))))
+    (switch-to-buffer (vterms--associated-buffer))
+    t)
+   (t nil)))
+
+
+(defun vterms--try-switch-to-root (root)
+  "Switch to a buffer associated via ROOT and return a success code."
+  (if root
+      (let ((b (vterms--db-lookup-vterm-buffer-name-by-root root)))
+        (cond
+         (b
+          (switch-to-buffer b)
+          t)
+         (t
+          nil)))
+    nil))
 
 
 ;;;###autoload
@@ -30,19 +75,31 @@ The Vterm buffer will start in the directory where the current
 buffer's file is located. It will also be named after this
 directory."
   (interactive)
-  (vterms--new (if buffer-file-name
-                  (file-name-directory buffer-file-name)
-                 nil)))
+  (vterms--new (vterms--dir)))
+
+
+(defun vterms--dir ()
+  "Retrieve current buffer's file directory if any."
+  (if buffer-file-name
+      (file-name-directory buffer-file-name)
+    nil))
 
 
 ;;;###autoload
 (defun vterms-new-in-project-root ()
-  "Like `vterms-new` but opens the Vterm in the current project's
-root directory."
+  "Create a Vterm buffer associated with the current buffer.
+
+The Vterm buffer will start in the current project's root
+directory."
   (interactive)
-  (vterms--new (if (null (project-current))
-                   nil
-                 (project-root (project-current)))))
+  (vterms--new (vterms--project-root)))
+
+
+(defun vterms--project-root ()
+  "Retrieve current project root if any."
+  (if (null (project-current))
+      nil
+    (project-root (project-current))))
 
 
 ;;;###autoload
@@ -68,13 +125,14 @@ root directory."
 
 
 (defun vterms--name-suggestion-for-directory (directory)
-  "Suggest a name part for a Vterm buffer based on a directory."
+  "Suggest a name part for a Vterm buffer based on DIRECTORY."
   (cond ((null directory) "")
         (t (concat "-" (file-name-nondirectory
                         (substring directory 0 (- (length directory) 1)))))))
 
 
 (defun vterms--new (root)
+  "Create a new Vterm buffer in ROOT, associate and open it."
   (let* ((name-suggestion (vterms--name-suggestion-for-directory root))
          (buffer (vterms--fresh-name name-suggestion)))
     (vterms--db-register (buffer-name (current-buffer)) buffer root)
@@ -87,6 +145,7 @@ root directory."
 
 
 (defun vterms--associated-buffer ()
+  "Find the Vterm buffer associated with the current buffer, if any."
   (vterms--db-lookup-vterm-buffer-name (buffer-name (current-buffer))))
 
 
@@ -108,7 +167,9 @@ current frame. Returns nil if none is found."
 (defun vterms--fresh-name (name-suggestion)
   "Compute a fresh buffer name for a Vterm buffer.
 
-Avoids conflicts with currently registered buffers."
+Use NAME-SUGGESTION as part of the fresh name to generate.
+
+Avoid conflicts with currently registered buffers."
   (let ((choice nil)
         (index 0))
     (while (null choice)
@@ -120,6 +181,7 @@ Avoids conflicts with currently registered buffers."
 
 
 (defun vterms--full-name (name-suggestion index)
+  "Compute a name candidate at INDEX from NAME-SUGGESTION."
   (if (equal index 0)
       (format "*vterm%s*" name-suggestion)
     (format "*vterm%s-%s*" name-suggestion index)))
@@ -131,25 +193,47 @@ Avoids conflicts with currently registered buffers."
         :by-root (make-hash-table :test 'equal)))
 
 
-(defun vterms--db-taken (vterm-buffer-name)
-  (if (gethash vterm-buffer-name (plist-get vterms--db :by-vterm-buffer-name)) t nil))
+(defun vterms--db-taken (vterm-buf-name)
+  "Check if VTERM-BUF-NAME is already taken."
+  (if (gethash vterm-buf-name (plist-get vterms--db :by-vterm-buffer-name)) t nil))
 
 
-(defun vterms--db-register (regular-buffer-name vterm-buffer-name root)
-  (let ((entry (list :vterm-buffer vterm-buffer-name
+(defun vterms--db-register (regular-buffer-name vterm-buf-name root)
+  "Register a new association from REGULAR-BUFFER-NAME to VTERM-BUF-NAME.
+
+ROOT, if non-nil, is the starting directory of the Vterm buffer."
+  (let ((entry (list :vterm-buffer vterm-buf-name
                      :regular-buffer regular-buffer-name
                      :root root)))
     (puthash regular-buffer-name entry (plist-get vterms--db :by-regular-buffer-name))
-    (puthash vterm-buffer-name entry (plist-get vterms--db :by-vterm-buffer-name))
+    (puthash vterm-buf-name entry (plist-get vterms--db :by-vterm-buffer-name))
     (when root
       (puthash root entry (plist-get vterms--db :by-root)))))
 
 
 (defun vterms--db-lookup-vterm-buffer-name (regular-buffer-name)
+  "Find the Vterm buffer name associated with the REGULAR-BUFFER-NAME."
   (plist-get
    (gethash regular-buffer-name
             (plist-get vterms--db :by-regular-buffer-name))
    :vterm-buffer))
+
+
+(defun vterms--db-lookup-vterm-buffer-name-by-root (root)
+  "Find the Vterm buffer name associated with the ROOT."
+  (plist-get
+   (gethash root
+            (plist-get vterms--db :by-root))
+   :vterm-buffer))
+
+
+(defun vterms--db-active-vterm-buffer-names ()
+  "List Vterm buffer names that are associated to a regular buffer."
+  (let ((result (list)))
+    (maphash (lambda (key _)
+               (setq result (cons key result)))
+             (plist-get vterms--db :by-vterm-buffer-name))
+    (reverse result)))
 
 
 (provide 'vterms)
