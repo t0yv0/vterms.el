@@ -77,7 +77,7 @@ root directory."
 (defun vterms--new (root)
   (let* ((name-suggestion (vterms--name-suggestion-for-directory root))
          (buffer (vterms--fresh-name name-suggestion)))
-    (vterms--db-register (buffer-name (current-buffer)) buffer)
+    (vterms--db-register (buffer-name (current-buffer)) buffer root)
     (if root
         (let ((default-directory root))
           (vterm buffer))
@@ -126,21 +126,30 @@ Avoids conflicts with currently registered buffers."
 
 
 (defvar vterms--db
-  (cons (make-hash-table :test 'equal)
-        (make-hash-table :test 'equal)))
+  (list :by-regular-buffer-name (make-hash-table :test 'equal)
+        :by-vterm-buffer-name (make-hash-table :test 'equal)
+        :by-root (make-hash-table :test 'equal)))
 
 
 (defun vterms--db-taken (vterm-buffer-name)
-  (if (gethash vterm-buffer-name (cdr vterms--db)) t nil))
+  (if (gethash vterm-buffer-name (plist-get vterms--db :by-vterm-buffer-name)) t nil))
 
 
-(defun vterms--db-register (regular-buffer-name vterm-buffer-name)
-  (puthash regular-buffer-name vterm-buffer-name (car vterms--db))
-  (puthash vterm-buffer-name t (cdr vterms--db)))
+(defun vterms--db-register (regular-buffer-name vterm-buffer-name root)
+  (let ((entry (list :vterm-buffer vterm-buffer-name
+                     :regular-buffer regular-buffer-name
+                     :root root)))
+    (puthash regular-buffer-name entry (plist-get vterms--db :by-regular-buffer-name))
+    (puthash vterm-buffer-name entry (plist-get vterms--db :by-vterm-buffer-name))
+    (when root
+      (puthash root entry (plist-get vterms--db :by-root)))))
 
 
 (defun vterms--db-lookup-vterm-buffer-name (regular-buffer-name)
-  (gethash regular-buffer-name (car vterms--db)))
+  (plist-get
+   (gethash regular-buffer-name
+            (plist-get vterms--db :by-regular-buffer-name))
+   :vterm-buffer))
 
 
 (provide 'vterms)
