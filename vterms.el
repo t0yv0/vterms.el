@@ -193,9 +193,28 @@ Avoid conflicts with currently registered buffers."
         :by-root (make-hash-table :test 'equal)))
 
 
+(defun vterms--db-active-entry (entry)
+  "Return ENTRY if it is non-nil and refers to real buffers.
+
+Otherwise returns nil."
+  (and entry
+       (get-buffer (plist-get entry :vterm-buffer))
+       (get-buffer (plist-get entry :regular-buffer))
+       entry))
+
+
+(defun vterms--db-lookup (key-type key &optional field)
+  "Looks up entries from the db by KEY-TYPE and KEY."
+  (let ((e (gethash key (plist-get vterms--db key-type))))
+    (when (vterms--db-active-entry e)
+      (if field
+          (plist-get e field)
+        e))))
+
+
 (defun vterms--db-taken (vterm-buf-name)
   "Check if VTERM-BUF-NAME is already taken."
-  (if (gethash vterm-buf-name (plist-get vterms--db :by-vterm-buffer-name)) t nil))
+  (if (vterms--db-lookup :by-vterm-buffer-name vterm-buf-name) t nil))
 
 
 (defun vterms--db-register (regular-buffer-name vterm-buf-name root)
@@ -213,25 +232,20 @@ ROOT, if non-nil, is the starting directory of the Vterm buffer."
 
 (defun vterms--db-lookup-vterm-buffer-name (regular-buffer-name)
   "Find the Vterm buffer name associated with the REGULAR-BUFFER-NAME."
-  (plist-get
-   (gethash regular-buffer-name
-            (plist-get vterms--db :by-regular-buffer-name))
-   :vterm-buffer))
+  (vterms--db-lookup :by-regular-buffer-name regular-buffer-name :vterm-buffer))
 
 
 (defun vterms--db-lookup-vterm-buffer-name-by-root (root)
   "Find the Vterm buffer name associated with the ROOT."
-  (plist-get
-   (gethash root
-            (plist-get vterms--db :by-root))
-   :vterm-buffer))
+  (vterms--db-lookup :by-root root :vterm-buffer))
 
 
 (defun vterms--db-active-vterm-buffer-names ()
   "List Vterm buffer names that are associated to a regular buffer."
   (let ((result (list)))
-    (maphash (lambda (key _)
-               (setq result (cons key result)))
+    (maphash (lambda (key entry)
+               (when (vterms--db-active-entry entry)
+                 (setq result (cons key result))))
              (plist-get vterms--db :by-vterm-buffer-name))
     (reverse result)))
 
