@@ -204,7 +204,9 @@ Otherwise returns nil."
 
 
 (defun vterms--db-lookup (key-type key &optional field)
-  "Looks up entries from the db by KEY-TYPE and KEY."
+  "Look up entries from the db by KEY-TYPE and KEY.
+
+If FIELD is given, extract the given field from the located entry."
   (let ((e (gethash key (plist-get vterms--db key-type))))
     (when (vterms--db-active-entry e)
       (if field
