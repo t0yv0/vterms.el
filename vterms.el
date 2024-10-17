@@ -23,7 +23,7 @@ directory it was originally opened in.")
 
 ;;;###autoload
 (defun vterms-toggle ()
-  "Toggles between a normal buffer and the associated Vterm buffer."
+  "Toggle between a normal buffer and the associated Vterm buffer."
   (interactive)
   (when (and (not (equal major-mode 'vterm-mode))
              vterms--association
@@ -135,7 +135,7 @@ Avoid conflicts with existing buffers."
 
 
 (defun vterms--find-by-dir (dir)
-  "Find a Vterm buffer created for a given directory."
+  "Find a Vterm buffer created for a given DIR directory."
   (seq-find
    (lambda (b)
      (with-current-buffer b
