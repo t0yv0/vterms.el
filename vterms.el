@@ -22,8 +22,7 @@ directory it was originally opened in.")
 
 
 (defvar-local vterms--recent-buffer nil
-  "This buffer-local variable stores the last regular buffer that
-was used to toggle into the current Vterm buffer.")
+  "The last regular buffer this Vterm was toggled from.")
 
 
 ;;;###autoload
