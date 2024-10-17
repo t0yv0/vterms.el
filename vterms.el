@@ -21,6 +21,11 @@ If the current buffer is a Vterm buffer, it may store the
 directory it was originally opened in.")
 
 
+(defvar-local vterms--recent-buffer nil
+  "This buffer-local variable stores the last regular buffer that
+was used to toggle into the current Vterm buffer.")
+
+
 ;;;###autoload
 (defun vterms-toggle ()
   "Toggle between a normal buffer and the associated Vterm buffer."
@@ -29,43 +34,55 @@ directory it was originally opened in.")
              vterms--association
              (not (buffer-live-p vterms--association)))
     (setq vterms--association nil))
+  (when (and vterms--recent-buffer
+             (not (buffer-live-p vterms--recent-buffer)))
+    (setq vterms--recent-buffer nil))
   (let ((buf nil)
         (buf-dir nil))
     (cond
      ;; if in Vterm mode already, simply close it
      ((equal major-mode 'vterm-mode)
-      (delete-window))
+      (delete-window)
+      (when vterms--recent-buffer
+        (switch-to-buffer vterms--recent-buffer)))
      ;; existing associated Vterm buffer
      (vterms--association
-      (switch-to-buffer vterms--association))
+      (vterms--switch-to-buffer vterms--association))
      ;; existing project-associated Vterm buffer
      ((let* ((root (vterms--project-root)))
         (when root
           (setq buf (vterms--find-by-dir root)))
         (and root buf))
-      (setq vterms--association buf)
-      (switch-to-buffer buf))
+      (vterms--switch-to-buffer buf))
      ;; existing dir-associated Vterm buffer
      ((let* ((d (vterms--dir)))
         (when d
           (setq buf (vterms--find-by-dir d)))
         (and d buf))
-      (setq vterms--association buf)
-      (switch-to-buffer buf))
+      (vterms--switch-to-buffer buf))
      ;; there exists a *vterm* buffer
      ((get-buffer "*vterm*")
       (setq buf (get-buffer "*vterm*"))
-      (setq vterms--association buf)
-      (switch-to-buffer buf))
+      (vterms--switch-to-buffer buf))
      ;; need a new Vterm buffer
      (t
       (setq buf-dir (or (vterms--project-root)
-                                 (vterms--dir)))
+                        (vterms--dir)))
       (setq buf (vterms--new buf-dir))
-      (setq vterms--association buf)
       (with-current-buffer buf
         (setq vterms--association buf-dir))
-      (switch-to-buffer buf)))))
+      (vterms--switch-to-buffer buf)))))
+
+
+;;;###autoload
+(defun vterms-back ()
+  "Go back to the buffer this Vterm was toggled from."
+  (interactive)
+  (when (and vterms--recent-buffer
+             (not (buffer-live-p vterms--recent-buffer)))
+    (setq vterms--recent-buffer nil))
+  (when vterms--recent-buffer
+    (switch-to-buffer vterms--recent-buffer)))
 
 
 ;;;###autoload
@@ -91,6 +108,17 @@ directory it was originally opened in.")
         (vterm-clear)
         (vterm-send-string (concat "cd " (shell-quote-argument d)))
         (vterm-send-return)))))
+
+
+(defun vterms--switch-to-buffer (buf)
+  "Similar to `switch-to-buffer' by opening BUF.
+
+Also maintains buffer associations."
+  (setq vterms--association buf)
+  (let ((from-buffer (get-buffer (buffer-name))))
+    (with-current-buffer buf
+      (setq vterms--recent-buffer from-buffer)))
+  (switch-to-buffer buf))
 
 
 (defun vterms--name-suggestion-for-directory (directory)
