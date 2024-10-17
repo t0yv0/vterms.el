@@ -52,6 +52,11 @@ directory it was originally opened in.")
         (and d buf))
       (setq vterms--association buf)
       (switch-to-buffer buf))
+     ;; there exists a *vterm* buffer
+     ((get-buffer "*vterm*")
+      (setq buf (get-buffer "*vterm*"))
+      (setq vterms--association buf)
+      (switch-to-buffer buf))
      ;; need a new Vterm buffer
      (t
       (setq buf-dir (or (vterms--project-root)
