@@ -10,7 +10,8 @@ Quickly recall the matching Vterm buffer after switching buffers or projects.
   (use-package vterms
     :bind (("C-c v v" . vterms-toggle)
            ("C-c v z" . vterms-repeat)
-           ("C-c v d" . vterms-cd))
+           ("C-c v d" . vterms-cd)
+           ("C-c v <backspace>" . vterms-back)))
 #+end_src
 
 ** Usage
