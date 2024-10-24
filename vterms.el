@@ -11,14 +11,12 @@
 (require 'vterm)
 
 
-(defvar-local vterms--association nil
-  "This buffer-local variable stores buffer associations.
+(defvar-local vterms--assoc nil
+  "The associated VTerm buffer.")
 
-If the current buffer is not a Vterm buffer, it may store the
-associated Vterm buffer.
 
-If the current buffer is a Vterm buffer, it may store the
-directory it was originally opened in.")
+(defvar-local vterms--start-dir nil
+  "The dir VTerm buffer was started in.")
 
 
 (defvar-local vterms--recent-buffer nil
@@ -29,24 +27,17 @@ directory it was originally opened in.")
 (defun vterms-toggle ()
   "Toggle between a normal buffer and the associated Vterm buffer."
   (interactive)
-  (when (and (not (equal major-mode 'vterm-mode))
-             vterms--association
-             (not (buffer-live-p vterms--association)))
-    (setq vterms--association nil))
-  (when (and vterms--recent-buffer
-             (not (buffer-live-p vterms--recent-buffer)))
-    (setq vterms--recent-buffer nil))
   (let ((buf nil)
         (buf-dir nil))
     (cond
      ;; if in Vterm mode already, simply close it
      ((equal major-mode 'vterm-mode)
       (delete-window)
-      (when vterms--recent-buffer
-        (switch-to-buffer vterms--recent-buffer)))
+      (when (vterms--recent-buffer-get)
+        (switch-to-buffer (vterms--recent-buffer-get))))
      ;; existing associated Vterm buffer
-     (vterms--association
-      (vterms--switch-to-buffer vterms--association))
+     ((vterms--assoc-get)
+      (vterms--switch-to-buffer (vterms--assoc-get)))
      ;; existing project-associated Vterm buffer
      ((let* ((root (vterms--project-root)))
         (when root
@@ -69,7 +60,7 @@ directory it was originally opened in.")
                         (vterms--dir)))
       (setq buf (vterms--new buf-dir))
       (with-current-buffer buf
-        (setq vterms--association buf-dir))
+        (setq vterms--start-dir buf-dir))
       (vterms--switch-to-buffer buf)))))
 
 
@@ -77,11 +68,8 @@ directory it was originally opened in.")
 (defun vterms-back ()
   "Go back to the buffer this Vterm was toggled from."
   (interactive)
-  (when (and vterms--recent-buffer
-             (not (buffer-live-p vterms--recent-buffer)))
-    (setq vterms--recent-buffer nil))
-  (when vterms--recent-buffer
-    (switch-to-buffer vterms--recent-buffer)))
+  (when (vterms--recent-buffer-get)
+    (switch-to-buffer (vterms--recent-buffer-get))))
 
 
 ;;;###autoload
@@ -113,7 +101,7 @@ directory it was originally opened in.")
   "Similar to `switch-to-buffer' by opening BUF.
 
 Also maintains buffer associations."
-  (setq vterms--association buf)
+  (setq vterms--assoc buf)
   (let ((from-buffer (get-buffer (buffer-name))))
     (with-current-buffer buf
       (setq vterms--recent-buffer from-buffer)))
@@ -168,7 +156,7 @@ Avoid conflicts with existing buffers."
      (with-current-buffer b
        (and
         (equal major-mode 'vterm-mode)
-        (equal vterms--association dir))))
+        (equal vterms--start-dir dir))))
    (buffer-list)))
 
 
@@ -184,6 +172,22 @@ Avoid conflicts with existing buffers."
   (if (null (project-current))
       nil
     (project-root (project-current))))
+
+
+(defun vterms--assoc-get ()
+  "Read `vterms--assoc' if it is live."
+  (when (and vterms--assoc
+             (not (buffer-live-p vterms--assoc)))
+    (setq vterms--assoc nil))
+  vterms--assoc)
+
+
+(defun vterms--recent-buffer-get ()
+  "Read `vterms--recent-buffer' if it is live."
+  (when (and vterms--recent-buffer
+             (not (buffer-live-p vterms--recent-buffer)))
+    (setq vterms--recent-buffer nil))
+  vterms--recent-buffer)
 
 
 (provide 'vterms)
