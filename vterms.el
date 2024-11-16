@@ -88,7 +88,14 @@
 (defun vterms-cd ()
   "Change the directory of the associated Vterm buffer to the current buffer's directory."
   (interactive)
-  (unless (equal major-mode 'vterm-mode)
+  (if (equal major-mode 'vterm-mode)
+      (let ((d nil))
+        (setq d (with-current-buffer vterms--recent-buffer
+                  (vterms--dir)))
+        (when d
+          (vterm-clear)
+          (vterm-send-string (concat "cd " (shell-quote-argument d)))
+          (vterm-send-return)))
     (let ((d (vterms--dir)))
       (save-window-excursion
         (vterms-toggle)
