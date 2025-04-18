@@ -1,36 +1,32 @@
 {
-  inputs = {
-    nixpkgs.url = github:NixOS/nixpkgs/nixos-24.05;
-    nixpkgs_darwin.url = github:NixOS/nixpkgs/nixpkgs-24.05-darwin;
-  };
-
-  outputs = { self, nixpkgs, nixpkgs_darwin }: let
-
-    version = self.rev or "dirty";
-
-    packages = nixpkgs: sys: emacs-flavor: let
-      pkgs = import nixpkgs { system = sys; };
-      epkgs = pkgs.emacsPackagesFor (emacs-flavor pkgs);
-
-      vterms = epkgs.elpaBuild {
-        pname = "vterms";
-        ename = "vterms";
-        version = version;
-        src = [ ./vterms.el ];
-        packageRequires = [ epkgs.vterm ];
-        meta = {};
-      };
-
-    in {
-      default = vterms;
+    inputs = {
+        nixpkgs.url = github:NixOS/nixpkgs/nixos-24.11;
+        flake-utils.url = "github:numtide/flake-utils";
     };
 
-  in {
-    packages = {
-      "x86_64-darwin" = packages nixpkgs_darwin "x86_64-darwin"  (pkgs: pkgs.emacs29-macport);
-      "aarch64-darwin" = packages nixpkgs_darwin "aarch64-darwin" (pkgs: pkgs.emacs29-macport);
-      "x86_64-linux" = packages nixpkgs "x86_64-linux" (pkgs: pkgs.emacs29);
-      "aarch64-linux" = packages nixpkgs "aarch64-linux" (pkgs: pkgs.emacs29);
+    outputs = { self, nixpkgs, flake-utils }: let
+
+        version = self.rev or "dirty";
+
+        overlay = final: prev: {
+            vterms = final.callPackage ./package.nix {
+                inherit version;
+                epkgs = final.emacsPackagesFor final.emacs;
+            };
+        };
+
+        # https://github.com/NixOS/nixpkgs/issues/395169
+        emacs-overlay = final: prev: {
+            emacs = prev.emacs.override { withNativeCompilation = false; };
+        };
+
+        out = system: let
+            pkgs = import nixpkgs { inherit system; overlays = [emacs-overlay]; };
+        in {
+            packages.default = (self.overlays.default pkgs pkgs).vterms;
+        };
+
+    in flake-utils.lib.eachDefaultSystem out // {
+        overlays.default = overlay;
     };
-  };
 }
